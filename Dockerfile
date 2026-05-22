@@ -38,13 +38,12 @@ WORKDIR /go/src/github.com/gohugoio/hugo
 # for the go mod cache it would be good if we could share it with other Go images using the same setup,
 # but the go build cache needs to be per platform.
 # See this comment: https://github.com/moby/buildkit/issues/1706#issuecomment-702238282
-RUN --mount=target=. \
-    --mount=type=cache,target=/go/pkg/mod \
-    --mount=type=cache,target=/root/.cache/go-build,id=go-build-$TARGETPLATFORM <<EOT
-    set -ex
-    xx-go build -tags "$HUGO_BUILD_TAGS" -ldflags "-s -w -X github.com/gohugoio/hugo/common/hugo.vendorInfo=docker" -o /usr/bin/hugo
+COPY . .
+RUN --mount=type=cache,target=/go/pkg/mod \
+    --mount=type=cache,target=/root/.cache/go-build,id=go-build-$TARGETPLATFORM \
+    set -ex && \
+    xx-go build -tags "$HUGO_BUILD_TAGS" -ldflags "-s -w -X github.com/gohugoio/hugo/common/hugo.vendorInfo=docker" -o /usr/bin/hugo && \
     xx-verify /usr/bin/hugo
-EOT
 
 # dart-sass downloads the dart-sass runtime dependency
 FROM alpine:${ALPINE_VERSION} AS dart-sass
@@ -79,7 +78,6 @@ RUN mkdir -p /var/hugo/bin /cache && \
     runuser -u hugo -- git config --global core.quotepath false
 
 USER hugo:hugo
-VOLUME /project
 WORKDIR /project
 ENV HUGO_CACHEDIR=/cache
 ENV PATH="/var/hugo/bin:$PATH"
